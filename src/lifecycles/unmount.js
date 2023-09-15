@@ -7,6 +7,7 @@ import {
 import { handleAppError, transformErr } from "../applications/app-errors.js";
 import { reasonableTime } from "../applications/timeouts.js";
 
+// 卸载
 export function toUnmountPromise(appOrParcel, hardFail) {
   return Promise.resolve().then(() => {
     if (appOrParcel.status !== MOUNTED) {
@@ -35,8 +36,10 @@ export function toUnmountPromise(appOrParcel, hardFail) {
       })
       .then(() => appOrParcel);
 
+    // todo
     function unmountAppOrParcel() {
       // We always try to unmount the appOrParcel, even if the children parcels failed to unmount.
+      // reasonableTime函数返回了promise
       return reasonableTime(appOrParcel, "unmount")
         .then(() => {
           // The appOrParcel needs to stay in a broken status if its children parcels fail to unmount

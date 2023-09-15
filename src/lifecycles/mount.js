@@ -11,6 +11,7 @@ import { toUnmountPromise } from "./unmount.js";
 let beforeFirstMountFired = false;
 let firstMountFired = false;
 
+// 挂载
 export function toMountPromise(appOrParcel, hardFail) {
   return Promise.resolve().then(() => {
     if (appOrParcel.status !== NOT_MOUNTED) {
@@ -21,7 +22,8 @@ export function toMountPromise(appOrParcel, hardFail) {
       window.dispatchEvent(new CustomEvent("single-spa:before-first-mount"));
       beforeFirstMountFired = true;
     }
-
+    
+    // reasonableTime函数返回了promise
     return reasonableTime(appOrParcel, "mount")
       .then(() => {
         appOrParcel.status = MOUNTED;

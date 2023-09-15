@@ -6,6 +6,7 @@ import { formatErrorMessage } from "../applications/app-errors.js";
 
 export function getProps(appOrParcel) {
   const name = toName(appOrParcel);
+  // 处理app的customProps
   let customProps =
     typeof appOrParcel.customProps === "function"
       ? appOrParcel.customProps(name, window.location)
@@ -26,6 +27,8 @@ export function getProps(appOrParcel) {
       customProps
     );
   }
+  
+  // 组装成一个新的对象
   const result = assign({}, customProps, {
     name,
     mountParcel: mountParcel.bind(appOrParcel),

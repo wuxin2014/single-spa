@@ -5,6 +5,7 @@ import { isInBrowser } from "./utils/runtime-environment.js";
 
 let started = false;
 
+// 在start被调用之前，应用先被下载，但不会初始化/挂载/卸载
 export function start(opts) {
   started = true;
   if (opts && opts.urlRerouteOnly) {

@@ -29,11 +29,17 @@ let appChangeUnderway = false,
   peopleWaitingOnAppChange = [],
   currentUrl = isInBrowser && window.location.href;
 
+// 触发appchange
 export function triggerAppChange() {
   // Call reroute with no arguments, intentionally
   return reroute();
 }
 
+/**
+ * 1. 注册应用时调用reroute
+ * 2. start时调用reroute
+ * reroute: 更改app.status和执行生命周期函数
+ */
 export function reroute(pendingPromises = [], eventArguments) {
   if (appChangeUnderway) {
     return new Promise((resolve, reject) => {
@@ -51,11 +57,13 @@ export function reroute(pendingPromises = [], eventArguments) {
     appsToLoad,
     appsToMount,
   } = getAppChanges();
+
   let appsThatChanged,
     navigationIsCanceled = false,
     oldUrl = currentUrl,
     newUrl = (currentUrl = window.location.href);
 
+  // 是否启动了
   if (isStarted()) {
     appChangeUnderway = true;
     appsThatChanged = appsToUnload.concat(
@@ -66,20 +74,22 @@ export function reroute(pendingPromises = [], eventArguments) {
     return performAppChanges();
   } else {
     appsThatChanged = appsToLoad;
-    return loadApps();
+    return loadApps(); // 返回了一个promise
   }
 
   function cancelNavigation() {
     navigationIsCanceled = true;
   }
 
+  // 整体返回一个立即resolved的promise，通过微任务来加载apps   loadApps => toLoadPromise
   function loadApps() {
     return Promise.resolve().then(() => {
+      // 加载每个子应用，并做一系列的状态变更和验证（比如结果为promise、子应用要导出生命周期函数）
       const loadPromises = appsToLoad.map(toLoadPromise);
-
+      // 保证所有加载子应用的微任务执行完成
       return (
         Promise.all(loadPromises)
-          .then(callAllEventListeners)
+          .then(callAllEventListeners) // callAllEventListeners函数入参是数组，并没有接收
           // there are no mounted apps, before start() is called, so we always return []
           .then(() => [])
           .catch((err) => {
@@ -92,6 +102,7 @@ export function reroute(pendingPromises = [], eventArguments) {
 
   function performAppChanges() {
     return Promise.resolve().then(() => {
+      // 触发自定义事件 = 》 注意事件监听在哪里
       // https://github.com/single-spa/single-spa/issues/545
       window.dispatchEvent(
         new CustomEvent(
@@ -116,6 +127,7 @@ export function reroute(pendingPromises = [], eventArguments) {
             getCustomEventDetail(true)
           )
         );
+        // todo 待看
         finishUpAndReturn();
         navigateToUrl(oldUrl);
         return;
@@ -158,6 +170,8 @@ export function reroute(pendingPromises = [], eventArguments) {
         .map((appToMount) => {
           return tryToBootstrapAndMount(appToMount, unmountAllPromise);
         });
+
+      // 返回值的地方
       return unmountAllPromise
         .catch((err) => {
           callAllEventListeners();
@@ -180,6 +194,7 @@ export function reroute(pendingPromises = [], eventArguments) {
     });
   }
 
+  // todo 待看
   function finishUpAndReturn() {
     const returnValue = getMountedApps();
     pendingPromises.forEach((promise) => promise.resolve(returnValue));
@@ -237,7 +252,8 @@ export function reroute(pendingPromises = [], eventArguments) {
 
     callCapturedEventListeners(eventArguments);
   }
-
+  
+  // 组装自定义事件的detail参数
   function getCustomEventDetail(isBeforeChanges = false, extraProperties) {
     const newAppStatuses = {};
     const appsByNewStatus = {
@@ -289,6 +305,7 @@ export function reroute(pendingPromises = [], eventArguments) {
       const appName = toName(app);
       status = status || getAppStatus(appName);
       newAppStatuses[appName] = status;
+
       const statusArr = (appsByNewStatus[status] =
         appsByNewStatus[status] || []);
       statusArr.push(appName);
@@ -303,10 +320,13 @@ export function reroute(pendingPromises = [], eventArguments) {
  * twice if that application should be active before bootstrapping and mounting.
  * https://github.com/single-spa/single-spa/issues/524
  */
+// 尝试初始化跟挂载
 function tryToBootstrapAndMount(app, unmountAllPromise) {
   if (shouldBeActive(app)) {
+    // 初始化完成
     return toBootstrapPromise(app).then((app) =>
       unmountAllPromise.then(() =>
+        // 第二次判断是为了防止中途用户切换路由 toMountPromise
         shouldBeActive(app) ? toMountPromise(app) : app
       )
     );

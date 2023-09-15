@@ -26,18 +26,21 @@ export function toLoadPromise(app) {
       return app.loadPromise;
     }
 
+    // 如果当前app status 不是NOT_LOADED / LOAD_ERROR,直接返回app
     if (app.status !== NOT_LOADED && app.status !== LOAD_ERROR) {
       return app;
     }
-
+    // 给app status赋值为 LOADING_SOURCE_CODE 下载中
     app.status = LOADING_SOURCE_CODE;
 
     let appOpts, isUserErr;
 
     return (app.loadPromise = Promise.resolve()
       .then(() => {
+        // 注意app.loadApp函数的执行
         const loadPromise = app.loadApp(getProps(app));
         if (!smellsLikeAPromise(loadPromise)) {
+          // loadPromise的值不是promise, 直接抛出错误
           // The name of the app will be prepended to this error message inside of the handleAppError function
           isUserErr = true;
           throw Error(
@@ -51,9 +54,11 @@ export function toLoadPromise(app) {
             )
           );
         }
+
+        // 主要逻辑处理
         return loadPromise.then((val) => {
           app.loadErrorTime = null;
-
+          // todo 怎么从loadPromise的then中，取到了appOpts
           appOpts = val;
 
           let validationErrMessage, validationErrCode;
@@ -122,7 +127,9 @@ export function toLoadPromise(app) {
             );
           }
 
+          // 下载之后，修改状态 已下载，但未初始化
           app.status = NOT_BOOTSTRAPPED;
+          // 给自应用app对象挂上bootstrap, mount, unmount, unload等方法
           app.bootstrap = flattenFnArray(appOpts, "bootstrap");
           app.mount = flattenFnArray(appOpts, "mount");
           app.unmount = flattenFnArray(appOpts, "unmount");

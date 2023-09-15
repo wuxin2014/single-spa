@@ -7,6 +7,7 @@ import {
 import { reasonableTime } from "../applications/timeouts.js";
 import { handleAppError, transformErr } from "../applications/app-errors.js";
 
+// 初始化
 export function toBootstrapPromise(appOrParcel, hardFail) {
   return Promise.resolve().then(() => {
     if (appOrParcel.status !== NOT_BOOTSTRAPPED) {
@@ -20,6 +21,7 @@ export function toBootstrapPromise(appOrParcel, hardFail) {
       return Promise.resolve().then(successfulBootstrap);
     }
 
+    // reasonableTime函数返回了promise
     return reasonableTime(appOrParcel, "bootstrap")
       .then(successfulBootstrap)
       .catch((err) => {

@@ -26,7 +26,7 @@ export function toUpdatePromise(parcel) {
     }
 
     parcel.status = UPDATING;
-
+    // reasonableTime函数返回了promise
     return reasonableTime(parcel, "update")
       .then(() => {
         parcel.status = MOUNTED;

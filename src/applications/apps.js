@@ -23,13 +23,15 @@ import { formatErrorMessage } from "./app-errors.js";
 import { isInBrowser } from "../utils/runtime-environment.js";
 import { assign } from "../utils/assign";
 
+// 存放所有的子应用
 const apps = [];
 
 export function getAppChanges() {
-  const appsToUnload = [],
-    appsToUnmount = [],
-    appsToLoad = [],
-    appsToMount = [];
+  // 注册的应用会经过下载(loaded)、初始化(initialized)、被挂载(mounted)、卸载(unmounted)和unloaded（被移除）等过程
+  const appsToUnload = [], // 需要被移除的
+    appsToUnmount = [], // 需要被卸载的
+    appsToLoad = [], // 需要被下载的
+    appsToMount = []; // 需要被挂载的
 
   // We re-attempt to download applications in LOAD_ERROR after a timeout of 200 milliseconds
   const currentTime = new Date().getTime();
@@ -88,12 +90,22 @@ export function getAppStatus(appName) {
   return app ? app.status : null;
 }
 
+// 注册应用
 export function registerApplication(
   appNameOrConfig,
   appOrLoadApp,
   activeWhen,
   customProps
 ) {
+  /**
+   * 格式化用户传递的应用配置参数
+   * registration = {
+   *    name: 'app1',
+   *    loadApp: 返回promise的函数,
+   *    activeWhen: 返回boolean值的函数,  // 传参可以是字符串 或者 数组 如 ['/myApp', (location) => location.pathname.startsWith('/some/other/path')],
+   *    customProps: {}, // 函数返回对象， 或者对象 如(name, location) => ({ some: 'value' }),
+   * }
+   */
   const registration = sanitizeArguments(
     appNameOrConfig,
     appOrLoadApp,
@@ -111,11 +123,12 @@ export function registerApplication(
       )
     );
 
+  // 往apps数组中追加单个app对象，并处理属性合并
   apps.push(
     assign(
       {
         loadErrorTime: null,
-        status: NOT_LOADED,
+        status: NOT_LOADED, // 注册时app的status是未下载
         parcels: {},
         devtools: {
           overlays: {
@@ -138,6 +151,7 @@ export function checkActivityFunctions(location = window.location) {
   return apps.filter((app) => app.activeWhen(location)).map(toName);
 }
 
+// 注销应用
 export function unregisterApplication(appName) {
   if (apps.filter((app) => toName(app) === appName).length === 0) {
     throw Error(
@@ -156,6 +170,7 @@ export function unregisterApplication(appName) {
   });
 }
 
+// 移除应用
 export function unloadApplication(appName, opts = { waitForUnmount: false }) {
   if (typeof appName !== "string") {
     throw Error(
@@ -226,6 +241,7 @@ function immediatelyUnloadApp(app, resolve, reject) {
     .catch(reject);
 }
 
+// 验证注册参数的有效性
 function validateRegisterWithArguments(
   name,
   appOrLoadApp,
@@ -336,6 +352,7 @@ export function validateRegisterWithConfig(config) {
     );
 }
 
+// customProps 可以为null或未定义，函数，对象
 function validCustomProps(customProps) {
   return (
     !customProps ||
@@ -345,13 +362,14 @@ function validCustomProps(customProps) {
       !Array.isArray(customProps))
   );
 }
-
+// 格式化用户传递的子应用配置参数
 function sanitizeArguments(
   appNameOrConfig,
   appOrLoadApp,
   activeWhen,
   customProps
 ) {
+  // 是否使用对象型api
   const usingObjectAPI = typeof appNameOrConfig === "object";
 
   const registration = {
@@ -386,7 +404,7 @@ function sanitizeArguments(
 
   return registration;
 }
-
+// 格式化loadApp参数
 function sanitizeLoadApp(loadApp) {
   if (typeof loadApp !== "function") {
     return () => Promise.resolve(loadApp);
@@ -394,11 +412,12 @@ function sanitizeLoadApp(loadApp) {
 
   return loadApp;
 }
-
+// 格式化customProps参数
 function sanitizeCustomProps(customProps) {
   return customProps ? customProps : {};
 }
-
+// 格式化activeWhen参数，传参 可以是字符串 || 数组
+// 如： '/myApp'， ['/myApp', (location) => location.pathname.startsWith('/some/other/path')]
 function sanitizeActiveWhen(activeWhen) {
   let activeWhenArray = Array.isArray(activeWhen) ? activeWhen : [activeWhen];
   activeWhenArray = activeWhenArray.map((activeWhenOrPath) =>
@@ -406,14 +425,15 @@ function sanitizeActiveWhen(activeWhen) {
       ? activeWhenOrPath
       : pathToActiveWhen(activeWhenOrPath)
   );
-
+  // 返回了一个函数
   return (location) =>
     activeWhenArray.some((activeWhen) => activeWhen(location));
 }
-
+// 将path转化成activeWhen
 export function pathToActiveWhen(path, exactMatch) {
+  // 根据用户提供的baseURL，生成正则表达式
   const regex = toDynamicPathValidatorRegex(path, exactMatch);
-
+  // 返回了一个函数, 函数中返回了boolean值
   return (location) => {
     // compatible with IE10
     let origin = location.origin;
@@ -427,12 +447,13 @@ export function pathToActiveWhen(path, exactMatch) {
     return regex.test(route);
   };
 }
-
+// 待看
 function toDynamicPathValidatorRegex(path, exactMatch) {
   let lastIndex = 0,
     inDynamic = false,
     regexStr = "^";
 
+  // path = '/myApp' => path[0] === '/'
   if (path[0] !== "/") {
     path = "/" + path;
   }

@@ -105,6 +105,7 @@ export function setUnloadMaxTime(time, dieOnTimeout, warningMillis) {
   };
 }
 
+// 合理时间范围内，执行相应的生命周期
 export function reasonableTime(appOrParcel, lifecycle) {
   const timeoutConfig = appOrParcel.timeouts[lifecycle];
   const warningPeriod = timeoutConfig.warningMillis;
@@ -113,7 +114,7 @@ export function reasonableTime(appOrParcel, lifecycle) {
   return new Promise((resolve, reject) => {
     let finished = false;
     let errored = false;
-
+    // 例如: bootstrat, mount, unmount， unload // 注意传参props
     appOrParcel[lifecycle](getProps(appOrParcel))
       .then((val) => {
         finished = true;
@@ -139,6 +140,7 @@ export function reasonableTime(appOrParcel, lifecycle) {
       timeoutConfig.millis
     );
 
+    // 超时处理逻辑， 一旦promise的status变更，也就走不到其他状态
     function maybeTimingOut(shouldError) {
       if (!finished) {
         if (shouldError === true) {
@@ -153,6 +155,7 @@ export function reasonableTime(appOrParcel, lifecycle) {
           const numWarnings = shouldError;
           const numMillis = numWarnings * warningPeriod;
           console.warn(errMsg);
+          // todo 这里是重试机制的意思吗？
           if (numMillis + warningPeriod < timeoutConfig.millis) {
             setTimeout(() => maybeTimingOut(numWarnings + 1), warningPeriod);
           }
